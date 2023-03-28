@@ -5,9 +5,16 @@ This is an utility that scans a typescript codebase and allows user to query it 
 - OpenAPI API Key
 - Node.js
 
+# Usage
+Install depdendencies with:
+`npm i`
+
+Run it on a codebase with:
+`npm start <path to codebase>`
+
 # Examples
 ```
-> npx ts-node --esm ./index.ts ./data/repo/
+> npm run build && npm start ./data/repo/
 
 Vector store exists, loading...
 
