@@ -14,7 +14,7 @@ Run it on a codebase with:
 
 # Examples
 ```
-> npm run build && npm start ./data/repo/
+> npm start ./data/repo/
 
 Vector store exists, loading...
 
