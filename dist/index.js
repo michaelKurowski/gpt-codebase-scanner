@@ -80,30 +80,7 @@ async function loadVectorStore(repositoryPath) {
         const resolvedPath = path.resolve(repositoryPath);
         console.log('Vector store does not exist, creating...');
         console.log('Loading data from', resolvedPath, '...');
-        const configPath = ts.findConfigFile(resolvedPath, ts.sys.fileExists, 'tsconfig.json');
-        console.log(`tsconfig located at ${configPath}`);
-        if (!configPath) {
-            throw new Error('Could not find a valid tsconfig.json.');
-        }
-        const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-        if (configFile.error) {
-            throw new Error(dedent `
-        Errors while parsing tsconfig.
-        ${configFile.error.messageText}
-      `);
-        }
-        const parsedConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(configPath), {}, configPath);
-        console.log('Parsing codebase...');
-        const program = ts.createProgram({
-            rootNames: parsedConfig.fileNames,
-            options: parsedConfig.options
-        });
-        const codebaseMapping = program.getSourceFiles()
-            .filter(file => !file.fileName.includes('node_modules'))
-            .map(sourceFile => {
-            return (new TextLoader(sourceFile.fileName)).loadAndSplit();
-        });
-        const documents = (await Promise.all(codebaseMapping)).flatMap(x => x);
+        const documents = await createDocumentsFromTsCodebase(resolvedPath);
         if (documents.length === 0) {
             throw new Error(dedent `
       Codebase couldn't be processed.
@@ -117,4 +94,30 @@ async function loadVectorStore(repositoryPath) {
         await vectorStore.save('./vector-store');
         return vectorStore;
     }
+}
+async function createDocumentsFromTsCodebase(resolvedPath) {
+    const configPath = ts.findConfigFile(resolvedPath, ts.sys.fileExists, 'tsconfig.json');
+    console.log(`tsconfig located at ${configPath}`);
+    if (!configPath) {
+        throw new Error('Could not find a valid tsconfig.json.');
+    }
+    const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+    if (configFile.error) {
+        throw new Error(dedent `
+      Errors while parsing tsconfig.
+      ${configFile.error.messageText}
+    `);
+    }
+    const parsedConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(configPath), {}, configPath);
+    console.log('Parsing codebase...');
+    const program = ts.createProgram({
+        rootNames: parsedConfig.fileNames,
+        options: parsedConfig.options
+    });
+    const codebaseMapping = program.getSourceFiles()
+        .filter(file => !file.fileName.includes('node_modules'))
+        .map(sourceFile => {
+        return (new TextLoader(sourceFile.fileName)).loadAndSplit();
+    });
+    return (await Promise.all(codebaseMapping)).flatMap(x => x);
 }
