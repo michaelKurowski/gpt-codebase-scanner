@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "langchain": "^0.0.42",
+    "ts-node": "^10.9.1"
+  },
+  "name": "langchain-playground",
+  "type": "module",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Michael Kurowski",
+  "license": "ISC",
+  "description": ""
+}
