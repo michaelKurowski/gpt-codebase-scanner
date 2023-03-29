@@ -1,7 +1,7 @@
 # What's this
 This is an utility that scans a typescript codebase and allows user to query it using natural language.
 
-Please keep in mind that this app uses OpenAPI under the hood. It's my toy project / PoC and I don't take responsibility for the costs of the OpenAPI usage (especially when used on a big codebase). You use it on your own responsibility.
+Please keep in mind that this app uses OpenAPI under the hood. It's my toy project / PoC and I don't take responsibility for the costs of the OpenAPI usage (especially when used on a big codebase). You use it at your own risk.
 
 # Requirments
 - OpenAPI API Key
