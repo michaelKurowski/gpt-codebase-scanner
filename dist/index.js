@@ -86,7 +86,6 @@ async function loadVectorStore(repositoryPath) {
         if (documents.length === 0) {
             throw new Error(dedent `
       Codebase couldn't be processed.
-      
       `);
         }
         console.log('Creating vector store...');
@@ -150,6 +149,12 @@ async function createDocumentsFromTsCodebase(resolvedPath) {
     catch (err) {
         // This costs money, if you fork this code
         // you should weight how much do you want it
+        const rl = readline.createInterface({ input, output });
+        const answer = await rl.question('\n\nDo you want to deeply analyze the codebase? It may take a while and cost a bit, but it\'ll improve the GPT answers. (y/N)');
+        if (answer.toLowerCase() !== 'y') {
+            console.log('Skipping codebase analysis...');
+            return documents;
+        }
         console.log('Codebase analysis, this process may take a while...');
         let progress = 0;
         const summarization = documents.map(async (document) => {
