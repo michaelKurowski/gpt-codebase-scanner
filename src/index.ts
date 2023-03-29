@@ -186,7 +186,7 @@ async function createDocumentsFromTsCodebase(resolvedPath) {
     if (answer.toLowerCase() !== 'y') {
       rl.close()
       console.log('Received "y" ')
-      console.log('Skipping codebase analysis...')
+      console.log('Skipping deep codebase analysis...')
       return documents
     }
     console.log('Codebase analysis, this process may take a while...')
