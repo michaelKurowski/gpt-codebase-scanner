@@ -11,6 +11,8 @@ import meow from 'meow';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import path from 'node:path';
+import { OpenAI } from 'langchain';
+import { Document } from 'langchain/document';
 dotenv.config();
 if (!process.env.OPEN_AI_KEY?.length) {
     throw new Error("OpenAI API Key is not set");
@@ -88,8 +90,17 @@ async function loadVectorStore(repositoryPath) {
       `);
         }
         console.log('Creating vector store...');
-        const vectorStore = await HNSWLib.fromDocuments(documents, new OpenAIEmbeddings({
+        // It sometimes may happen that AI will get a hiccup and output an empty document
+        // langchain doesn't handle it properly, so we need to filter out empty documents
+        const normalizedDocuments = documents
+            .filter(document => document.pageContent.length > 0);
+        const vectorStore = await (HNSWLib.fromDocuments(normalizedDocuments, new OpenAIEmbeddings({
             openAIApiKey: process.env.OPEN_AI_KEY,
+            batchSize: 5,
+            maxRetries: 5
+        })).catch(err => {
+            fs.writeFileSync('./error.json', JSON.stringify(err, null, 2));
+            throw new Error('Failed to create vector store', { cause: err });
         }));
         await vectorStore.save('./vector-store');
         return vectorStore;
@@ -119,5 +130,55 @@ async function createDocumentsFromTsCodebase(resolvedPath) {
         .map(sourceFile => {
         return (new TextLoader(sourceFile.fileName)).loadAndSplit();
     });
-    return (await Promise.all(codebaseMapping)).flatMap(x => x);
+    const documents = (await Promise.all(codebaseMapping)).flatMap(x => x);
+    const summarizationModel = new OpenAI({
+        openAIApiKey: process.env.OPEN_AI_KEY,
+        temperature: 0,
+        // Seems like langchain doesn't have a neat tool to handle
+        // OpenAI's rate limiting
+        maxConcurrency: 3,
+        maxRetries: 5
+    });
+    try {
+        fs.accessSync('./documents/documents.json', fs.constants.F_OK);
+        console.log('Analysis cache exists.');
+        console.log('Analysis cache loading...');
+        const cachedDocuments = fs.readFileSync('./documents/documents.json', 'utf-8');
+        const parsedCachedDocuments = JSON.parse(cachedDocuments);
+        return parsedCachedDocuments;
+    }
+    catch (err) {
+        // This costs money, if you fork this code
+        // you should weight how much do you want it
+        console.log('Codebase analysis, this process may take a while...');
+        let progress = 0;
+        const summarization = documents.map(async (document) => {
+            const summary = await summarizationModel.call(`Write a summary for the following file [${document.metadata.source}]: ${document.pageContent}`);
+            const summarizedDocument = new Document({
+                pageContent: summary,
+                metadata: {
+                    source: document.metadata.source
+                }
+            });
+            progress++;
+            console.log(`${progress}/${documents.length} chunks...`);
+            return summarizedDocument;
+        });
+        const summaries = await Promise.all(summarization);
+        const allDocuments = [
+            ...documents,
+            ...summaries
+        ];
+        const stringifiedDocuments = JSON.stringify(allDocuments, null, 2);
+        console.log('Saving analysis results...');
+        try {
+            fs.accessSync('./documents', fs.constants.F_OK);
+        }
+        catch (err) {
+            fs.mkdirSync('./documents', { recursive: true });
+        }
+        fs.writeFileSync('./documents/documents.json', stringifiedDocuments);
+        console.log('Analysis results saved.');
+        return allDocuments;
+    }
 }
