@@ -2,7 +2,7 @@
 This is an utility that scans a typescript codebase and allows user to query it using natural language.
 
 # Requirments
-- OpenAPI API Key
+- OpenAI API Key
 - Node.js
 
 # Usage
